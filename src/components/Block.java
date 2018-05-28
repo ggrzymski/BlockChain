@@ -3,6 +3,7 @@ package components;
 import org.apache.commons.codec.digest.DigestUtils;
 import util.StringUtil;
 
+import java.util.ArrayList;
 import java.util.Date;
 
 /**
@@ -14,17 +15,19 @@ public class Block {
     /**
      * Digital Signature of current block. Its own hash is calculated from the previous hash.
      */
-    private String hash;
+    public String hash;
 
     /**
      * Digital signature of the previous hash
      */
-    private String previousHash;
+    public String previousHash;
 
     /**
      * Transaction data
      */
-    private String data;
+    public String merkleRoot;
+    public ArrayList<Transaction> transactions = new ArrayList<Transaction>(); //our data will be a simple message.
+
 
     /**
      * Timestamp of transaction in miliseconds since 1970.
@@ -37,8 +40,8 @@ public class Block {
      */
     private int nonce = 0;
 
-    public Block(String data, String previousHash) {
-        this.data = data;
+    public Block(String previousHash)
+    {
         this.previousHash = previousHash;
         this.timeStamp = new Date().getTime();
         this.hash = StringUtil.calculateHash(this);
@@ -55,6 +58,7 @@ public class Block {
         /* The target is a number which the hash of a block header must be less than or equal to in order for that block to be considered valid.
          * This target number, when represented as a 256 bit number, has several leading zeros.
          */
+        merkleRoot = StringUtil.getMerkleRoot(transactions);
         String target = new String(new char[difficulty]).replace('\0', '0');
 
         while(!this.hash.substring(0, difficulty).equals(target))
@@ -66,7 +70,30 @@ public class Block {
         System.out.println("Block Mined!!! : " + hash);
     }
 
-    public String getHash() {
+    public boolean addTransaction(Transaction transaction)
+    {
+        if(transaction == null)
+        {
+            return false;
+        }
+
+        if((!"0".equals(previousHash)))
+        {
+            if((transaction.processTransaction() != true))
+            {
+                System.out.println("Transaction failed to process. Discarded.");
+                return false;
+            }
+        }
+
+        transactions.add(transaction);
+        System.out.println("Transaction Successfully added to Block");
+
+        return true;
+    }
+
+    public String getHash()
+    {
         return hash;
     }
 
@@ -75,7 +102,7 @@ public class Block {
     }
 
     public String getData() {
-        return data;
+        return merkleRoot;
     }
 
     public long getTimeStamp() {
